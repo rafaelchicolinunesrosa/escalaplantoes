@@ -554,6 +554,18 @@
       document.getElementById('supervisor').addEventListener('input', syncRodape);
       document.getElementById('tipoOperacao').addEventListener('change', syncRodape);
       syncRodape();
+
+      // Auto-preenche o dia da semana quando a data é selecionada
+      document.getElementById('data').addEventListener('change', function() {
+        const dateInput = this.value;
+        if (dateInput) {
+          const date = new Date(dateInput + 'T00:00:00'); // Força o fuso horário local
+          const dayOfWeek = date.getDay();
+          const daysOfWeek = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+          document.getElementById('diaSemana').value = daysOfWeek[dayOfWeek];
+          saveFormState(); // Salva o estado após atualizar o dia da semana
+        }
+      });
     }
   </script>
 </body>
