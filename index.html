@@ -37,6 +37,14 @@
 
     h1 { text-align: center; font-size: 1.5rem; margin: 4px 0 8px; }
 
+    .info-template {
+      background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;
+      padding: 10px 12px; margin-bottom: 12px; font-size: 0.90rem;
+    }
+    .info-template strong { color: #856404; }
+    .info-template ul { margin: 6px 0; padding-left: 20px; }
+    .info-template li { margin: 3px 0; }
+
     .dados-gerais {
       display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; font-size: 0.95rem;
     }
@@ -153,6 +161,7 @@
       h1 { margin: 2px 0 4px; }
 
       .add-row-btn, .remove-row-btn, .print-btn, .turnos-selector { display: none !important; }
+      .info-template { display: none !important; }
 
       #turnosContainer { grid-template-columns: 1fr 1fr !important; gap: 6px !important; page-break-inside: avoid; }
       .turno-card { page-break-inside: avoid; }
@@ -221,6 +230,15 @@
 
     <h1>Escala de Fiscalização - DEMUTRAN Osasco</h1>
 
+    <div class="info-template">
+      <strong>Como usar os Templates:</strong>
+      <ul>
+        <li><strong>Template de Plantão:</strong> Salva configuração básica (Viatura, Agentes, 36) sem O.S. Use para ter uma base pré-preenchida ao selecionar o plantão.</li>
+        <li><strong>Escala do Dia:</strong> Salva tudo (incluindo O.S.) para uma data específica. Ideal para preparar o mês inteiro no início, considerando folgas e férias.</li>
+        <li><strong>Ver Escalas Salvas:</strong> Clique em "Ver Escalas Salvas" para listar todas as datas com escalas prontas e carregar rapidamente.</li>
+      </ul>
+    </div>
+
     <form id="escalaForm">
       <div class="dados-gerais">
         <div>
@@ -281,6 +299,24 @@
         <div class="linha-assinatura">Assinatura</div>
       </div>
 
+      <div style="display: flex; gap: 10px; justify-content: center; margin: 16px auto 8px auto; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 280px; max-width: 50%; border: 2px solid #0070c0; border-radius: 8px; padding: 10px; background: #f0f8ff;">
+          <div style="font-weight: bold; color: #004080; margin-bottom: 8px; text-align: center; font-size: 0.95rem;">Templates de Plantão</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
+            <button type="button" class="print-btn" style="margin: 0; padding: 6px 10px; font-size: 0.88rem; flex: 1; min-width: 110px;" onclick="saveTemplate()">Salvar Template</button>
+            <button type="button" class="print-btn" style="margin: 0; padding: 6px 10px; font-size: 0.88rem; flex: 1; min-width: 110px; background: #0070c0;" onclick="loadTemplate()">Carregar Template</button>
+            <button type="button" class="print-btn" style="margin: 0; padding: 6px 10px; font-size: 0.88rem; flex: 1; min-width: 110px; background: #c04000;" onclick="clearTemplate()">Limpar Template</button>
+          </div>
+        </div>
+        <div style="flex: 1; min-width: 280px; max-width: 50%; border: 2px solid #28a745; border-radius: 8px; padding: 10px; background: #f0fff4;">
+          <div style="font-weight: bold; color: #1e7e34; margin-bottom: 8px; text-align: center; font-size: 0.95rem;">Escalas Diárias (por Data)</div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
+            <button type="button" class="print-btn" style="margin: 0; padding: 6px 10px; font-size: 0.88rem; flex: 1; min-width: 110px; background: #28a745;" onclick="saveDailyTemplate()">Salvar Escala do Dia</button>
+            <button type="button" class="print-btn" style="margin: 0; padding: 6px 10px; font-size: 0.88rem; flex: 1; min-width: 110px; background: #17a2b8;" onclick="loadDailyTemplate()">Carregar Escala do Dia</button>
+            <button type="button" class="print-btn" style="margin: 0; padding: 6px 10px; font-size: 0.88rem; flex: 1; min-width: 110px; background: #6c757d;" onclick="showSavedDates()">Ver Escalas Salvas</button>
+          </div>
+        </div>
+      </div>
       <button type="button" class="print-btn" onclick="preparePrint()">Gerar PDF / Imprimir</button>
     </form>
   </div>
@@ -527,6 +563,417 @@
       });
     }
 
+    // Funções de gerenciamento de templates (por Plantão)
+    function saveTemplate() {
+      const plantao = document.getElementById('tipoOperacao').value;
+      if (!plantao) {
+        alert('Por favor, selecione um Plantão antes de salvar o template.');
+        return;
+      }
+
+      const supervisor = document.getElementById('supervisor').value;
+      if (!supervisor) {
+        alert('Por favor, preencha o Supervisor do Plantão antes de salvar o template.');
+        return;
+      }
+
+      const template = {
+        supervisor: supervisor,
+        plantao: plantao,
+        turnos: []
+      };
+
+      // Salva os dados de cada turno (exceto O.S.)
+      turnos.forEach((turno, idx) => {
+        const tableBody = document.querySelector(`#table-${idx} tbody`);
+        const rows = [];
+
+        Array.from(tableBody.querySelectorAll('tr')).forEach(tr => {
+          const viatura = tr.querySelector(`input[name="viatura-${idx}[]"]`).value;
+          const agentes = tr.querySelector(`textarea[name="agentes-${idx}[]"]`).value;
+          const horario = tr.querySelector(`input[name="horario-${idx}[]"]`).value;
+
+          // Só salva linhas com pelo menos viatura ou agentes preenchidos
+          if (viatura.trim() || agentes.trim()) {
+            rows.push({
+              viatura: viatura,
+              agentes: agentes,
+              horario: horario,
+              os: '' // O.S. sempre vazio no template
+            });
+          }
+        });
+
+        template.turnos.push({
+          idx: idx,
+          rows: rows
+        });
+      });
+
+      // Salva o estado dos checkboxes dos turnos
+      const turnosVisibility = {};
+      document.querySelectorAll('.turno-toggle').forEach(toggle => {
+        const idx = toggle.getAttribute('data-idx');
+        turnosVisibility[idx] = toggle.checked;
+      });
+      template.turnosVisibility = turnosVisibility;
+
+      // Salva no localStorage com chave específica do plantão
+      const templateKey = `escalaTemplate_${plantao.replace(/\s+/g, '_')}`;
+      localStorage.setItem(templateKey, JSON.stringify(template));
+
+      alert(`Template salvo com sucesso para ${plantao}!\n\nAgora você pode carregar este template sempre que selecionar ${plantao}.`);
+    }
+
+    // Funções de gerenciamento de templates diários (por Data)
+    function saveDailyTemplate() {
+      const data = document.getElementById('data').value;
+      if (!data) {
+        alert('Por favor, selecione uma Data antes de salvar o template diário.');
+        return;
+      }
+
+      const plantao = document.getElementById('tipoOperacao').value;
+      if (!plantao) {
+        alert('Por favor, selecione um Plantão antes de salvar o template diário.');
+        return;
+      }
+
+      const supervisor = document.getElementById('supervisor').value;
+      const diaSemana = document.getElementById('diaSemana').value;
+      const observacoes = document.getElementById('observacoes').value;
+
+      const dailyTemplate = {
+        data: data,
+        diaSemana: diaSemana,
+        plantao: plantao,
+        supervisor: supervisor,
+        observacoes: observacoes,
+        turnos: []
+      };
+
+      // Salva TODOS os dados de cada turno (incluindo O.S.)
+      turnos.forEach((turno, idx) => {
+        const tableBody = document.querySelector(`#table-${idx} tbody`);
+        const rows = [];
+
+        Array.from(tableBody.querySelectorAll('tr')).forEach(tr => {
+          const viatura = tr.querySelector(`input[name="viatura-${idx}[]"]`).value;
+          const agentes = tr.querySelector(`textarea[name="agentes-${idx}[]"]`).value;
+          const horario = tr.querySelector(`input[name="horario-${idx}[]"]`).value;
+          const os = tr.querySelector(`textarea[name="os-${idx}[]"]`).value;
+
+          // Só salva linhas com pelo menos viatura ou agentes preenchidos
+          if (viatura.trim() || agentes.trim()) {
+            rows.push({
+              viatura: viatura,
+              agentes: agentes,
+              horario: horario,
+              os: os // Inclui O.S. no template diário
+            });
+          }
+        });
+
+        dailyTemplate.turnos.push({
+          idx: idx,
+          rows: rows
+        });
+      });
+
+      // Salva o estado dos checkboxes dos turnos
+      const turnosVisibility = {};
+      document.querySelectorAll('.turno-toggle').forEach(toggle => {
+        const idx = toggle.getAttribute('data-idx');
+        turnosVisibility[idx] = toggle.checked;
+      });
+      dailyTemplate.turnosVisibility = turnosVisibility;
+
+      // Salva no localStorage com chave específica da data
+      const templateKey = `escalaDailyTemplate_${data}`;
+      localStorage.setItem(templateKey, JSON.stringify(dailyTemplate));
+
+      alert(`Escala salva com sucesso para o dia ${formatDateBR(data)}!\n\nVocê pode carregar esta escala a qualquer momento.`);
+    }
+
+    function loadDailyTemplate() {
+      const data = document.getElementById('data').value;
+      if (!data) {
+        alert('Por favor, selecione uma Data para carregar o template diário.');
+        return;
+      }
+
+      const templateKey = `escalaDailyTemplate_${data}`;
+      const savedTemplate = localStorage.getItem(templateKey);
+
+      if (!savedTemplate) {
+        alert(`Nenhuma escala salva encontrada para o dia ${formatDateBR(data)}.\n\nPrimeiro, preencha os dados e clique em "Salvar Escala do Dia".`);
+        return;
+      }
+
+      const confirmLoad = confirm(`Carregar escala salva para ${formatDateBR(data)}?\n\nIsso irá substituir todos os dados atuais.`);
+      if (!confirmLoad) return;
+
+      const template = JSON.parse(savedTemplate);
+
+      // Carrega todos os dados
+      document.getElementById('data').value = template.data;
+      document.getElementById('diaSemana').value = template.diaSemana;
+      document.getElementById('tipoOperacao').value = template.plantao;
+      document.getElementById('supervisor').value = template.supervisor;
+      document.getElementById('observacoes').value = template.observacoes;
+
+      // Carrega dados de cada turno
+      template.turnos.forEach(turnoData => {
+        const idx = turnoData.idx;
+        const tableBody = document.querySelector(`#table-${idx} tbody`);
+
+        // Limpa as linhas existentes
+        tableBody.innerHTML = '';
+
+        // Recria as linhas do template
+        if (turnoData.rows.length === 0) {
+          tableBody.insertAdjacentHTML('beforeend', createRow(idx));
+        } else {
+          turnoData.rows.forEach(rowData => {
+            tableBody.insertAdjacentHTML('beforeend', createRow(idx));
+            const newRow = tableBody.lastElementChild;
+
+            newRow.querySelector(`input[name="viatura-${idx}[]"]`).value = rowData.viatura;
+            newRow.querySelector(`textarea[name="agentes-${idx}[]"]`).value = rowData.agentes;
+            newRow.querySelector(`input[name="horario-${idx}[]"]`).value = rowData.horario;
+            newRow.querySelector(`textarea[name="os-${idx}[]"]`).value = rowData.os; // Carrega O.S. também
+          });
+        }
+      });
+
+      // Restaura a visibilidade dos turnos
+      if (template.turnosVisibility) {
+        document.querySelectorAll('.turno-toggle').forEach(toggle => {
+          const idx = toggle.getAttribute('data-idx');
+          if (template.turnosVisibility[idx] !== undefined) {
+            toggle.checked = template.turnosVisibility[idx];
+            const card = document.getElementById('turno-' + idx);
+            card.style.display = toggle.checked ? 'block' : 'none';
+          }
+        });
+      }
+
+      // Reinicializa o auto-grow
+      initAutoGrow();
+      syncRodape();
+      saveFormState();
+
+      alert(`Escala do dia ${formatDateBR(data)} carregada com sucesso!`);
+    }
+
+    function deleteDailyTemplate(dateStr) {
+      const confirmDelete = confirm(`Tem certeza que deseja excluir a escala salva de ${formatDateBR(dateStr)}?\n\nEsta ação não pode ser desfeita.`);
+      if (!confirmDelete) return;
+
+      const templateKey = `escalaDailyTemplate_${dateStr}`;
+      localStorage.removeItem(templateKey);
+
+      // Fecha o modal e recarrega a lista
+      closeModal();
+      showSavedDates();
+    }
+
+    function showSavedDates() {
+      // Busca todas as escalas diárias salvas
+      const savedDates = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.startsWith('escalaDailyTemplate_')) {
+          const dateStr = key.replace('escalaDailyTemplate_', '');
+          const template = JSON.parse(localStorage.getItem(key));
+          savedDates.push({
+            date: dateStr,
+            data: template
+          });
+        }
+      }
+
+      // Ordena por data (mais recente primeiro)
+      savedDates.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      if (savedDates.length === 0) {
+        alert('Nenhuma escala diária salva encontrada.\n\nSalve escalas usando o botão "Salvar Escala do Dia".');
+        return;
+      }
+
+      // Cria o conteúdo HTML da lista
+      let html = '<div style="max-height: 400px; overflow-y: auto;">';
+      html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">';
+      html += '<thead><tr style="background: #eef0ff; position: sticky; top: 0;">';
+      html += '<th style="padding: 8px; border: 1px solid #ddd;">Data</th>';
+      html += '<th style="padding: 8px; border: 1px solid #ddd;">Dia</th>';
+      html += '<th style="padding: 8px; border: 1px solid #ddd;">Plantão</th>';
+      html += '<th style="padding: 8px; border: 1px solid #ddd;">Supervisor</th>';
+      html += '<th style="padding: 8px; border: 1px solid #ddd;">Ações</th>';
+      html += '</tr></thead><tbody>';
+
+      savedDates.forEach(item => {
+        html += '<tr>';
+        html += `<td style="padding: 6px; border: 1px solid #ddd; white-space: nowrap;">${formatDateBR(item.date)}</td>`;
+        html += `<td style="padding: 6px; border: 1px solid #ddd;">${item.data.diaSemana || '-'}</td>`;
+        html += `<td style="padding: 6px; border: 1px solid #ddd;">${item.data.plantao || '-'}</td>`;
+        html += `<td style="padding: 6px; border: 1px solid #ddd;">${item.data.supervisor || '-'}</td>`;
+        html += `<td style="padding: 6px; border: 1px solid #ddd; white-space: nowrap;">`;
+        html += `<button onclick="loadDateFromList('${item.date}')" style="padding: 4px 8px; margin: 2px; background: #0070c0; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Carregar</button>`;
+        html += `<button onclick="deleteDailyTemplate('${item.date}')" style="padding: 4px 8px; margin: 2px; background: #c00; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Excluir</button>`;
+        html += '</td>';
+        html += '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+
+      showModal('Escalas Diárias Salvas', html);
+    }
+
+    function loadDateFromList(dateStr) {
+      document.getElementById('data').value = dateStr;
+      closeModal();
+      loadDailyTemplate();
+    }
+
+    function formatDateBR(dateStr) {
+      if (!dateStr) return '';
+      const [year, month, day] = dateStr.split('-');
+      return `${day}/${month}/${year}`;
+    }
+
+    // Sistema de Modal
+    function showModal(title, content) {
+      // Remove modal existente se houver
+      const existingModal = document.getElementById('customModal');
+      if (existingModal) {
+        existingModal.remove();
+      }
+
+      const modal = document.createElement('div');
+      modal.id = 'customModal';
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 9999;';
+
+      const modalContent = document.createElement('div');
+      modalContent.style.cssText = 'background: white; padding: 20px; border-radius: 12px; max-width: 90%; max-height: 90%; overflow: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
+
+      modalContent.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+          <h2 style="margin: 0; color: #004080;">${title}</h2>
+          <button onclick="closeModal()" style="background: #c00; color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 1rem;">Fechar</button>
+        </div>
+        ${content}
+      `;
+
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
+
+      // Fecha ao clicar fora do modal
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          closeModal();
+        }
+      });
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('customModal');
+      if (modal) {
+        modal.remove();
+      }
+    }
+
+    function loadTemplate() {
+      const plantao = document.getElementById('tipoOperacao').value;
+      if (!plantao) {
+        alert('Por favor, selecione um Plantão antes de carregar o template.');
+        return;
+      }
+
+      const templateKey = `escalaTemplate_${plantao.replace(/\s+/g, '_')}`;
+      const savedTemplate = localStorage.getItem(templateKey);
+
+      if (!savedTemplate) {
+        alert(`Nenhum template encontrado para ${plantao}.\n\nPrimeiro, preencha os dados e clique em "Salvar como Template".`);
+        return;
+      }
+
+      const confirmLoad = confirm(`Carregar template para ${plantao}?\n\nIsso irá substituir os dados atuais (exceto Data e O.S. já preenchidas).`);
+      if (!confirmLoad) return;
+
+      const template = JSON.parse(savedTemplate);
+
+      // Carrega supervisor
+      document.getElementById('supervisor').value = template.supervisor;
+
+      // Carrega dados de cada turno
+      template.turnos.forEach(turnoData => {
+        const idx = turnoData.idx;
+        const tableBody = document.querySelector(`#table-${idx} tbody`);
+
+        // Limpa as linhas existentes
+        tableBody.innerHTML = '';
+
+        // Recria as linhas do template
+        if (turnoData.rows.length === 0) {
+          // Se não houver linhas no template, adiciona uma linha vazia
+          tableBody.insertAdjacentHTML('beforeend', createRow(idx));
+        } else {
+          turnoData.rows.forEach(rowData => {
+            tableBody.insertAdjacentHTML('beforeend', createRow(idx));
+            const newRow = tableBody.lastElementChild;
+
+            newRow.querySelector(`input[name="viatura-${idx}[]"]`).value = rowData.viatura;
+            newRow.querySelector(`textarea[name="agentes-${idx}[]"]`).value = rowData.agentes;
+            newRow.querySelector(`input[name="horario-${idx}[]"]`).value = rowData.horario;
+            // O.S. permanece vazio para ser preenchido no dia
+            newRow.querySelector(`textarea[name="os-${idx}[]"]`).value = '';
+          });
+        }
+      });
+
+      // Restaura a visibilidade dos turnos
+      if (template.turnosVisibility) {
+        document.querySelectorAll('.turno-toggle').forEach(toggle => {
+          const idx = toggle.getAttribute('data-idx');
+          if (template.turnosVisibility[idx] !== undefined) {
+            toggle.checked = template.turnosVisibility[idx];
+            const card = document.getElementById('turno-' + idx);
+            card.style.display = toggle.checked ? 'block' : 'none';
+          }
+        });
+      }
+
+      // Reinicializa o auto-grow
+      initAutoGrow();
+      syncRodape();
+      saveFormState();
+
+      alert(`Template carregado com sucesso!\n\nAgora você pode preencher a Data e adicionar as O.S. do dia.`);
+    }
+
+    function clearTemplate() {
+      const plantao = document.getElementById('tipoOperacao').value;
+      if (!plantao) {
+        alert('Por favor, selecione um Plantão para limpar o template.');
+        return;
+      }
+
+      const templateKey = `escalaTemplate_${plantao.replace(/\s+/g, '_')}`;
+      const savedTemplate = localStorage.getItem(templateKey);
+
+      if (!savedTemplate) {
+        alert(`Nenhum template encontrado para ${plantao}.`);
+        return;
+      }
+
+      const confirmClear = confirm(`Tem certeza que deseja excluir o template de ${plantao}?\n\nEsta ação não pode ser desfeita.`);
+      if (!confirmClear) return;
+
+      localStorage.removeItem(templateKey);
+      alert(`Template de ${plantao} excluído com sucesso!`);
+    }
+
     // Inicialização
     window.onload = function() {
       const container = document.getElementById('turnosContainer');
@@ -552,7 +999,21 @@
       form.addEventListener('change', saveFormState);
 
       document.getElementById('supervisor').addEventListener('input', syncRodape);
-      document.getElementById('tipoOperacao').addEventListener('change', syncRodape);
+      document.getElementById('tipoOperacao').addEventListener('change', function() {
+        syncRodape();
+        // Verifica se existe template para o plantão selecionado
+        const plantao = this.value;
+        if (plantao) {
+          const templateKey = `escalaTemplate_${plantao.replace(/\s+/g, '_')}`;
+          const savedTemplate = localStorage.getItem(templateKey);
+          if (savedTemplate) {
+            const autoLoad = confirm(`Template encontrado para ${plantao}!\n\nDeseja carregar o template agora?`);
+            if (autoLoad) {
+              loadTemplate();
+            }
+          }
+        }
+      });
       syncRodape();
 
       // Auto-preenche o dia da semana quando a data é selecionada
@@ -564,6 +1025,16 @@
           const daysOfWeek = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
           document.getElementById('diaSemana').value = daysOfWeek[dayOfWeek];
           saveFormState(); // Salva o estado após atualizar o dia da semana
+
+          // Verifica se existe escala salva para esta data
+          const templateKey = `escalaDailyTemplate_${dateInput}`;
+          const savedTemplate = localStorage.getItem(templateKey);
+          if (savedTemplate) {
+            const autoLoad = confirm(`Escala encontrada para ${formatDateBR(dateInput)}!\n\nDeseja carregar a escala salva?`);
+            if (autoLoad) {
+              loadDailyTemplate();
+            }
+          }
         }
       });
     }
