@@ -5,10 +5,6 @@
   <title>Sistema DEMUTRAN Osasco</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
-  <!-- Biblioteca jsPDF (mais confiável que html2pdf) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -545,16 +541,6 @@
       min-height: 24px;
     }
 
-    /* Container para captura do PDF */
-    #pdfCapture {
-      position: absolute;
-      left: -9999px;
-      top: 0;
-      width: 1200px;
-      background: white;
-      padding: 20px;
-    }
-
     /* Módulos de Folgas e Férias (placeholders) */
     .folgas-container, .ferias-container {
       display: none;
@@ -629,20 +615,26 @@
       <h1>🚔 DEMUTRAN Osasco</h1>
       <p>Sistema de Gestão de Escalas</p>
     </div>
-    <form class="login-form" onsubmit="handleLogin(event)">
+    <form class="login-form" id="loginForm">
       <div class="error-message" id="loginError"></div>
       
       <div class="form-group">
         <label for="username">👤 Usuário</label>
-        <input type="text" id="username" placeholder="Digite seu usuário" required>
+        <input type="text" id="username" placeholder="Digite seu usuário" required autocomplete="username">
       </div>
       
       <div class="form-group">
         <label for="password">🔒 Senha</label>
-        <input type="password" id="password" placeholder="Digite sua senha" required>
+        <input type="password" id="password" placeholder="Digite sua senha" required autocomplete="current-password">
       </div>
       
       <button type="submit" class="login-btn">Entrar</button>
+      
+      <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 8px; font-size: 0.85rem; color: #004080;">
+        <strong>💡 Credenciais de teste:</strong><br>
+        Usuário: <code style="background: white; padding: 2px 6px; border-radius: 3px;">demutran</code><br>
+        Senha: <code style="background: white; padding: 2px 6px; border-radius: 3px;">osasco2025</code>
+      </div>
     </form>
   </div>
 
@@ -681,8 +673,8 @@
     <button class="back-btn" onclick="backToModules()">← Voltar ao Menu</button>
     
     <div class="logos">
-      <img src="logos/Logo demutran osasco.png" alt="Logo DEMUTRAN Osasco">
-      <img src="logos/logo agente de transito.png" alt="Logo Agente de Trânsito">
+      <img src="logos/Logo demutran osasco.png" alt="Logo DEMUTRAN Osasco" onerror="this.style.display='none'">
+      <img src="logos/logo agente de transito.png" alt="Logo Agente de Trânsito" onerror="this.style.display='none'">
     </div>
 
     <h1>Escala de Fiscalização - DEMUTRAN Osasco</h1>
@@ -707,8 +699,8 @@
       <input type="password" id="apiKey" placeholder="$2a$10$xxxxxxxxxxxxxxxxxxxxx" value="$2a$10$vgfrAI6lgj5R0fSHzxhFDemJRBzc4fONGjcygtAvBtaRd3Y3251FO">
       
       <div>
-        <button onclick="createDatabase()">🚀 Criar Banco de Dados</button>
-        <button onclick="testConnection()">🔍 Testar Conexão</button>
+        <button type="button" onclick="createDatabase()">🚀 Criar Banco de Dados</button>
+        <button type="button" onclick="testConnection()">🔍 Testar Conexão</button>
       </div>
       
       <div class="status" id="configStatus"></div>
@@ -830,29 +822,39 @@
 
     const SESSION_KEY = 'demutran_session';
 
-    function handleLogin(event) {
-      event.preventDefault();
+    // Previne submit padrão e processa login
+    document.addEventListener('DOMContentLoaded', function() {
+      const loginForm = document.getElementById('loginForm');
       
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      const errorDiv = document.getElementById('loginError');
-      
-      if (username === CREDENTIALS.username && password === CREDENTIALS.password) {
-        // Login bem-sucedido
-        sessionStorage.setItem(SESSION_KEY, 'authenticated');
-        showModulesScreen();
-      } else {
-        // Login falhou
-        errorDiv.textContent = '❌ Usuário ou senha incorretos!';
-        errorDiv.classList.add('show');
+      loginForm.addEventListener('submit', function(event) {
+        event.preventDefault();
         
-        setTimeout(() => {
-          errorDiv.classList.remove('show');
-        }, 3000);
-      }
-    }
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const errorDiv = document.getElementById('loginError');
+        
+        console.log('Tentando login com:', username); // Debug
+        
+        if (username === CREDENTIALS.username && password === CREDENTIALS.password) {
+          // Login bem-sucedido
+          console.log('Login bem-sucedido!'); // Debug
+          sessionStorage.setItem(SESSION_KEY, 'authenticated');
+          showModulesScreen();
+        } else {
+          // Login falhou
+          console.log('Login falhou'); // Debug
+          errorDiv.textContent = '❌ Usuário ou senha incorretos!';
+          errorDiv.classList.add('show');
+          
+          setTimeout(() => {
+            errorDiv.classList.remove('show');
+          }, 3000);
+        }
+      });
+    });
 
     function showModulesScreen() {
+      console.log('Mostrando tela de módulos'); // Debug
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('modulesScreen').style.display = 'block';
     }
@@ -887,6 +889,7 @@
 
     function checkSession() {
       const isAuthenticated = sessionStorage.getItem(SESSION_KEY);
+      console.log('Verificando sessão:', isAuthenticated); // Debug
       if (isAuthenticated === 'authenticated') {
         showModulesScreen();
       }
@@ -1142,8 +1145,6 @@
           loadFormData(found.dados);
           alert(`✅ Escala carregada com sucesso!\n\n📅 Data: ${formatDateBR(data)}\n👮 Plantão: ${plantao}\n👤 Supervisor: ${found.supervisor}\n🕐 Salva em: ${found.timestamp}`);
         } else {
-          alert(`ℹ️ Nenhuma escala encontrada para:\
-        } else {
           alert(`ℹ️ Nenhuma escala encontrada para:\n\n📅 Data: ${formatDateBR(data)}\n👮 Plantão: ${plantao}\n\nTotal de escalas salvas: ${escalas.length}`);
         }
       } catch (error) {
@@ -1214,6 +1215,9 @@
       }
     }
 
+    function loadScaleFromList(date, plantao) {
+      document.getElementById('data').value = date;
+      document.getElementById('tipoOperacao').value = plantao
     function loadScaleFromList(date, plantao) {
       document.getElementById('data').value = date;
       document.getElementById('tipoOperacao').value = plantao;
@@ -1483,7 +1487,8 @@
     }
 
     // ========== INICIALIZAÇÃO ==========
-    window.onload = function() {
+    window.addEventListener('load', function() {
+      console.log('Página carregada'); // Debug
       checkSession();
       loadConfig();
 
@@ -1504,7 +1509,7 @@
           document.getElementById('diaSemana').value = daysOfWeek[dayOfWeek];
         }
       });
-    }
+    });
   </script>
 </body>
 </html>
